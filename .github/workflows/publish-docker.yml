@@ -3,7 +3,7 @@ name: Publish Docker Image to GHCR
 on:
     push:
         branches:
-            - main
+            - master
             - dev
     workflow_dispatch:
 
@@ -41,9 +41,9 @@ jobs:
                     tags: |
                         type=raw,value=dev,enable=${{ github.ref_name == 'dev' }}
                         type=sha,prefix=dev-,enable=${{ github.ref_name == 'dev' }}
-                        type=raw,value=prod,enable=${{ github.ref_name == 'main' }}
-                        type=sha,prefix=prod-,enable=${{ github.ref_name == 'main' }}
-                        type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+                        type=raw,value=prod,enable=${{ github.ref_name == 'master' }}
+                        type=sha,prefix=prod-,enable=${{ github.ref_name == 'master' }}
+                        type=raw,value=latest,enable=${{ github.ref_name == 'master' }}
 
             -   name: Extract immutable SHA tag
                 id: image_tag
