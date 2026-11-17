@@ -1,48 +1,54 @@
-import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL} from "../../src/utils/constants";
-import {FakeSnippetStore} from "../../src/utils/mock/fakeSnippetStore";
+import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL, PERMISSIONS_URL} from "../../src/utils/constants";
 
-describe('Add snippet tests', () => {
-  const fakeStore = new FakeSnippetStore()
+describe('Snippet detail tests', () => {
   beforeEach(() => {
     cy.loginToAuth0(
         AUTH0_USERNAME,
         AUTH0_PASSWORD
-    )
-    cy.intercept('GET', BACKEND_URL+"/snippet/*", {
-      statusCode: 200,
-      body: fakeStore.getSnippetById("1"),
-    }).as("getSnippetById")
-    cy.intercept('GET', BACKEND_URL+"/snippet*").as("getSnippets")
+    );
+    cy.intercept('GET', `${BACKEND_URL}/snippet*`).as('getSnippets');
+    cy.intercept('GET', `${BACKEND_URL}/snippet/*`).as('getSnippetById');
 
-    cy.visit("/")
+    cy.visit('/');
+    cy.wait('@getSnippets');
 
-    cy.get('.MuiTableBody-root > :nth-child(1)', { timeout: 10000 }).click();
-  })
+    cy.get('[data-testid="snippet-row"]', { timeout: 10000 }).first().click();
+    cy.wait('@getSnippetById');
+  });
 
-  it('Can share a snippet ', () => {
+  it('Can share a snippet', () => {
+    cy.intercept('GET', `${PERMISSIONS_URL}/users*`).as('getUsers');
+    cy.intercept('POST', `${PERMISSIONS_URL}/snippets/*/members`).as('shareSnippet');
+
     cy.get('[aria-label="Share"]').click();
-    cy.get('#\\:rl\\:').click();
-    cy.get('#\\:rl\\:-option-0').click();
-    cy.get('.css-1yuhvjn > .MuiBox-root > .MuiButton-contained').click();
-    cy.wait(2000)
-  })
+    cy.get('input[role="combobox"]').click();
+    cy.wait('@getUsers');
+    cy.get('[role="listbox"] [role="option"]', { timeout: 10000 }).first().click();
+    cy.contains('button', 'Share').click();
 
-  it('Can run snippets', function() {
-    cy.get('[data-testid="PlayArrowIcon"]').click();
-    cy.get('.css-1hpabnv > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').should("have.length.greaterThan",0);
+    cy.wait('@shareSnippet').its('response.statusCode').should('be.oneOf', [200, 201, 204]);
   });
 
-  it('Can format snippets', function() {
-    cy.get('[data-testid="ReadMoreIcon"] > path').click();
+  it('Can format snippets', () => {
+    cy.get('[data-testid="ReadMoreIcon"]').click();
   });
 
-  it('Can save snippets', function() {
-    cy.get('.css-10egq61 > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').click();
-    cy.get('.css-10egq61 > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').type("Some new line");
-    cy.get('[data-testid="SaveIcon"] > path').click();
+  it('Can save snippets', () => {
+    cy.intercept('PUT', `${BACKEND_URL}/snippet/*`).as('updateSnippet');
+
+    cy.get('.npm__react-simple-code-editor__textarea').first().click();
+    cy.get('.npm__react-simple-code-editor__textarea').first().type('\nlet cypressVar: number = 1;');
+    cy.get('[data-testid="SaveIcon"]').click();
+
+    cy.wait('@updateSnippet').its('response.statusCode').should('eq', 200);
   });
 
-  it('Can delete snippets', function() {
-    cy.get('[data-testid="DeleteIcon"] > path').click();
+  it('Can delete snippets', () => {
+    cy.intercept('DELETE', `${BACKEND_URL}/snippet/*`).as('deleteSnippet');
+
+    cy.get('[data-testid="DeleteIcon"]').click();
+    cy.contains('button', 'Delete').click();
+
+    cy.wait('@deleteSnippet').its('response.statusCode').should('be.oneOf', [200, 204]);
   });
-})
+});
