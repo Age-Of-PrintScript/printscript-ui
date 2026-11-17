@@ -50,6 +50,14 @@ export type SnippetResponse = {
     lintWarnings?: LintWarningResponse[];
 };
 
+export type SnippetVersionResponse = {
+    id: string;
+    version: number;
+    isLatest: boolean;
+    language: string;
+    languageVersion: string;
+};
+
 export type CreateSnippetRequest = {
     title: string;
     description?: string;

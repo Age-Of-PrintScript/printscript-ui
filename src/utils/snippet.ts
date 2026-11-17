@@ -26,8 +26,17 @@ export type UpdateSnippet = {
   content: string
 }
 
+export type SnippetVersion = {
+  id: string;
+  version: number;
+  isLatest: boolean;
+  language: string;
+  languageVersion: string;
+}
+
 export type Snippet = CreateSnippet & {
-  id: string
+  id: string;
+  snippetVersion?: number;
 } & SnippetStatus
 
 export type LintWarning = {

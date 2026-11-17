@@ -1,5 +1,5 @@
 import {SnippetOperations} from "../snippetOperations.ts";
-import {ComplianceEnum, CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from "../snippet.ts";
+import {ComplianceEnum, CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, SnippetVersion, UpdateSnippet} from "../snippet.ts";
 import {FileType, LanguageOption} from "../../types/FileType.ts";
 import {Rule} from "../../types/Rule.ts";
 import {TestCase} from "../../types/TestCase.ts";
@@ -17,6 +17,7 @@ import {
     UpdateFormatRulesRequest,
     ActiveFormatRulesResponse,
     SnippetResponse,
+    SnippetVersionResponse,
     CreateSnippetRequest,
     UpdateSnippetRequest,
     CreateSnippetTestRequest,
@@ -55,6 +56,7 @@ export class RealSnippetOperations implements SnippetOperations {
     private toSnippet(s: SnippetResponse, extension: string): Snippet {
         return {
             id: s.id,
+            snippetVersion: s.version,
             name: s.title,
             description: s.description ?? undefined,
             content: s.content,
@@ -140,9 +142,21 @@ export class RealSnippetOperations implements SnippetOperations {
         }));
     }
 
-    async getSnippetById(id: string): Promise<Snippet | undefined> {
-        const res = await this.api.get<SnippetResponse>(`/snippet/${id}`);
+    async getSnippetById(id: string, version?: number): Promise<Snippet | undefined> {
+        const params = version !== undefined ? { version } : undefined;
+        const res = await this.api.get<SnippetResponse>(`/snippet/${id}`, { params });
         return this.toSnippet(res.data, "ps"); // provisorio: confirmá el valor en fakeSnippetStore.ts
+    }
+
+    async getSnippetVersions(id: string): Promise<SnippetVersion[]> {
+        const res = await this.api.get<SnippetVersionResponse[]>(`/snippet/${id}/versions`);
+        return res.data.map(v => ({
+            id: v.id,
+            version: v.version,
+            isLatest: v.isLatest,
+            language: v.language,
+            languageVersion: v.languageVersion,
+        }));
     }
 
     async getTestCases(snippetId: string): Promise<TestCase[]> {

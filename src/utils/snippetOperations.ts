@@ -1,4 +1,4 @@
-import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from './snippet'
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, SnippetVersion, UpdateSnippet} from './snippet'
 import {PaginatedUsers} from "./users.ts";
 import {TestCase} from "../types/TestCase.ts";
 import {TestCaseResult} from "./queries.tsx";
@@ -10,7 +10,9 @@ export interface SnippetOperations {
 
   createSnippet(createSnippet: CreateSnippet): Promise<Snippet>
 
-  getSnippetById(id: string): Promise<Snippet | undefined>
+  getSnippetById(id: string, version?: number): Promise<Snippet | undefined>
+
+  getSnippetVersions(id: string): Promise<SnippetVersion[]>
 
   updateSnippetById(id: string, updateSnippet: UpdateSnippet): Promise<Snippet>
 
