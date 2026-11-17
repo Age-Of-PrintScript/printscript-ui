@@ -7,14 +7,16 @@ import {Drawer} from "@mui/material";
 import {useGetSnippets} from "../utils/queries.tsx";
 import {usePaginationContext} from "../contexts/paginationContext.tsx";
 import useDebounce from "../hooks/useDebounce.ts";
+import {SnippetFilters, SnippetSortField} from "../utils/snippet.ts";
 
 const HomeScreen = () => {
   const {id: paramsId} = useParams<{ id: string }>();
   const [searchTerm, setSearchTerm] = useState('');
   const [snippetName, setSnippetName] = useState('');
+  const [filters, setFilters] = useState<SnippetFilters>({relation: 'ALL'});
   const [snippetId, setSnippetId] = useState<string | null>(null)
   const {page, page_size, count, handleChangeCount, handleGoToPage} = usePaginationContext()
-  const {data, isLoading} = useGetSnippets(page, page_size, snippetName)
+  const {data, isLoading} = useGetSnippets(page, page_size, {...filters, name: snippetName})
 
   useEffect(() => {
     if (data?.count !== undefined && data.count !== count) {
@@ -44,10 +46,25 @@ const HomeScreen = () => {
     setSearchTerm(snippetName);
   };
 
+  const handleFilterChange = (patch: Partial<SnippetFilters>) => {
+    handleGoToPage(0);
+    setFilters((prev) => ({...prev, ...patch}));
+  };
+
+  const handleSortChange = (field: SnippetSortField) => {
+    handleGoToPage(0);
+    setFilters((prev) => ({
+      ...prev,
+      sortBy: field,
+      sortDir: prev.sortBy === field && prev.sortDir === 'ASC' ? 'DESC' : 'ASC',
+    }));
+  };
+
   return (
       <>
         <SnippetTable loading={isLoading} handleClickSnippet={setSnippetId} snippets={data?.snippets}
-                      handleSearchSnippet={handleSearchSnippet}/>
+                      handleSearchSnippet={handleSearchSnippet} filters={filters}
+                      onFilterChange={handleFilterChange} onSortChange={handleSortChange}/>
         <Drawer open={!!snippetId} anchor={"right"} onClose={handleCloseModal}>
           {snippetId && <SnippetDetail handleCloseModal={handleCloseModal} id={snippetId}/>}
         </Drawer>

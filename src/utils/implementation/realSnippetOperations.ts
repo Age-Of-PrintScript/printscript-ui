@@ -1,6 +1,6 @@
 import {SnippetOperations} from "../snippetOperations.ts";
-import {ComplianceEnum, CreateSnippet, PaginatedSnippets, ShareRole, Snippet, UpdateSnippet} from "../snippet.ts";
-import {FileType} from "../../types/FileType.ts";
+import {ComplianceEnum, CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from "../snippet.ts";
+import {FileType, LanguageOption} from "../../types/FileType.ts";
 import {Rule} from "../../types/Rule.ts";
 import {TestCase} from "../../types/TestCase.ts";
 import {PaginatedUsers} from "../users.ts";
@@ -62,7 +62,8 @@ export class RealSnippetOperations implements SnippetOperations {
             version: s.languageVersion,
             extension,
             author: s.ownerId,
-            compliance: "pending",
+            compliance: toComplianceEnum(s.compliance ?? 'PENDING'),
+            lintWarnings: s.lintWarnings ?? [],
         };
     }
 
@@ -112,6 +113,11 @@ export class RealSnippetOperations implements SnippetOperations {
         );
     }
 
+    async getLanguages(): Promise<LanguageOption[]> {
+        const res = await this.api.get<LanguageResponse[]>('/languages');
+        return res.data;
+    }
+
     async getFormatRules(): Promise<Rule[]> {
         const res = await this.api.get<FormatRulesResponse>('format/rules')
         const activeByRuleId = new Map(res.data.activeRules.map(a => [a.ruleId, a.value]));
@@ -157,10 +163,19 @@ export class RealSnippetOperations implements SnippetOperations {
         return res.data;
     }
 
-    async listSnippetDescriptors(page: number, pageSize: number, snippetName?: string): Promise<PaginatedSnippets> {
-        const res = await this.api.get<PaginatedSnippetsResponse>('/snippet', {
-            params: {page, pageSize, name: snippetName},
-        });
+    async listSnippetDescriptors(page: number, pageSize: number, filters?: SnippetFilters | string): Promise<PaginatedSnippets> {
+        const normalized: SnippetFilters = typeof filters === 'string' ? {name: filters} : (filters ?? {});
+        const params: Record<string, string | number | undefined> = {
+            page,
+            pageSize,
+            name: normalized.name || undefined,
+            relation: normalized.relation && normalized.relation !== 'ALL' ? normalized.relation : undefined,
+            language: normalized.language || undefined,
+            compliance: normalized.compliance || undefined,
+            sortBy: normalized.sortBy || undefined,
+            sortDir: normalized.sortBy ? (normalized.sortDir ?? 'ASC') : undefined,
+        };
+        const res = await this.api.get<PaginatedSnippetsResponse>('/snippet', {params});
         return {
             page: res.data.page,
             page_size: res.data.pageSize,

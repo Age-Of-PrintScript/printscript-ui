@@ -5,7 +5,7 @@ import autoBind from 'auto-bind'
 import {PaginatedUsers} from "../users.ts";
 import {TestCase} from "../../types/TestCase.ts";
 import type {TestCaseResult} from "../queries.tsx";
-import {FileType} from "../../types/FileType.ts";
+import {FileType, LanguageOption} from "../../types/FileType.ts";
 import {Rule} from "../../types/Rule.ts";
 
 const DELAY: number = 1000
@@ -136,6 +136,12 @@ export class FakeSnippetOperations implements SnippetOperations {
   getFileTypes(): Promise<FileType[]> {
     return new Promise(resolve => {
       setTimeout(() => resolve(this.fakeStore.getFileTypes()), DELAY)
+    })
+  }
+
+  getLanguages(): Promise<LanguageOption[]> {
+    return new Promise(resolve => {
+      setTimeout(() => resolve([{language: 'printscript', fileTypes: ['prs', 'ps'], versions: ['1.0', '1.1']}]), DELAY)
     })
   }
 

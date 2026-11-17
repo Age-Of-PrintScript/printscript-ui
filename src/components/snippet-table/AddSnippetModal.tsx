@@ -20,7 +20,7 @@ import "prismjs/themes/prism-okaidia.css";
 import {Save} from "@mui/icons-material";
 import {CreateSnippet, CreateSnippetWithLang} from "../../utils/snippet.ts";
 import {ModalWrapper} from "../common/ModalWrapper.tsx";
-import {useCreateSnippet, useGetFileTypes} from "../../utils/queries.tsx";
+import {useCreateSnippet, useGetLanguages} from "../../utils/queries.tsx";
 import {queryClient} from "../../App.tsx";
 import {useSnackbarContext} from "../../contexts/snackbarContext.tsx";
 import {getApiErrorMessage} from "../../utils/errorMessage.ts";
@@ -56,7 +56,16 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
             createSnackbar('error', getApiErrorMessage(error, 'Failed to create snippet'));
         },
     })
-    const {data: fileTypes} = useGetFileTypes();
+    const {data: languageOptions} = useGetLanguages();
+    const selectedLanguageOption = languageOptions?.find((l) => l.language === language);
+    const availableVersions = selectedLanguageOption?.versions ?? [];
+
+    const handleLanguageChange = (newLanguage: string) => {
+        setLanguage(newLanguage);
+        const option = languageOptions?.find((l) => l.language === newLanguage);
+        const defaultVer = option?.versions.at(-1) ?? "";
+        setVersion(defaultVer);
+    };
 
     const handleCreateSnippet = () => {
         const newSnippet: CreateSnippet = {
@@ -65,7 +74,7 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
             description: description,
             content: code,
             language: language,
-            extension: fileTypes?.find((f) => f.language === language)?.extension ?? "prs"
+            extension: selectedLanguageOption?.fileTypes[0] ?? "prs"
         }
         createSnippet(newSnippet);
     }
@@ -136,11 +145,11 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
                         id="demo-simple-select"
                         value={language}
                         label="Age"
-                        onChange={(e: SelectChangeEvent<string>) => setLanguage(e.target.value)}
+                        onChange={(e: SelectChangeEvent<string>) => handleLanguageChange(e.target.value)}
                         sx={{width: '100%'}}
                     >
                         {
-                            fileTypes?.map(x => (
+                            languageOptions?.map(x => (
                                 <MenuItem data-testid={`menu-option-${x.language}`} key={x.language}
                                           value={x.language}>{capitalize((x.language))}</MenuItem>
                             ))
@@ -157,9 +166,7 @@ export const AddSnippetModal = ({open, onClose, defaultSnippet}: {
                         onChange={(e: SelectChangeEvent<string>) => setVersion(e.target.value)}
                         sx={{width: '100%'}}
                     >
-                        { //ya se que está hardcodeado esto despues hay que mejorarlo
-                            //nos falta un endpoint para pedir las versiones posibles
-                            ["1.0", "1.1"].map((v) => (
+                        {availableVersions.map((v) => (
                             <MenuItem data-testid={`menu-option-version-${v}`} key={v} value={v}>
                                 {v}
                             </MenuItem>
