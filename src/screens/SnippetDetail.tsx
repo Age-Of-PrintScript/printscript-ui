@@ -19,6 +19,7 @@ import {SnippetExecution} from "./SnippetExecution.tsx";
 import ReadMoreIcon from '@mui/icons-material/ReadMore';
 import {queryClient} from "../App.tsx";
 import {DeleteConfirmationModal} from "../components/snippet-detail/DeleteConfirmationModal.tsx";
+import {LintWarningsPanel} from "../components/snippet-detail/LintWarningsPanel.tsx";
 import {useSnackbarContext} from "../contexts/snackbarContext.tsx";
 import {getApiErrorMessage} from "../utils/errorMessage.ts";
 
@@ -28,6 +29,7 @@ type SnippetDetailProps = {
 }
 
 const DownloadButton = ({snippet}: { snippet?: Snippet }) => {
+  const {createSnackbar} = useSnackbarContext();
   if (!snippet) return null;
 
   const handleDownload = () => {
@@ -38,6 +40,7 @@ const DownloadButton = ({snippet}: { snippet?: Snippet }) => {
     link.download = `${snippet.name}.${snippet.extension}`;
     link.click();
     URL.revokeObjectURL(url);
+    createSnackbar('success', 'Snippet downloaded');
   };
 
   return (
@@ -70,6 +73,9 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
     },
   })
   const {mutate: formatSnippet, isLoading: isFormatLoading, data: formatSnippetData} = useFormatSnippet({
+    onSuccess: () => {
+      createSnackbar('success', 'Snippet formatted');
+    },
     onError: (error) => {
       createSnackbar('error', getApiErrorMessage(error, 'Failed to format snippet'));
     },
@@ -148,6 +154,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                 </IconButton>
               </Tooltip>
             </Box>
+            <LintWarningsPanel compliance={snippet?.compliance} warnings={snippet?.lintWarnings}/>
             <Box display={"flex"} gap={2}>
               <Bòx flex={1} height={"fit-content"} overflow={"none"} minHeight={"500px"} bgcolor={'black'} color={'white'} code={code}>
                 <Editor

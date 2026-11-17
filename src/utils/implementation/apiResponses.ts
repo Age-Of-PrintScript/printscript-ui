@@ -31,6 +31,12 @@ export type UpdateLintRulesRequest = {
     rules: LintRuleSelection[];
 };
 
+export type LintWarningResponse = {
+    message: string;
+    line: number;
+    column: number;
+};
+
 export type SnippetResponse = {
     id: string;
     version: number;
@@ -40,6 +46,8 @@ export type SnippetResponse = {
     language: string;
     languageVersion: string;
     content: string;
+    compliance?: string;
+    lintWarnings?: LintWarningResponse[];
 };
 
 export type CreateSnippetRequest = {
