@@ -17,6 +17,13 @@
 import './commands'
 import {loginViaAuth0Ui} from "./auth-provider-commands/auth0";
 
+// Ignora el TypeError del iframe oculto de Auth0 cuando Cypress navega/redirige durante el login
+Cypress.on('uncaught:exception', (err) => {
+  if (err.message.includes("Cannot read properties of null (reading 'document')")) {
+    return false
+  }
+})
+
 Cypress.Commands.add('loginToAuth0', (username: string, password: string) => {
   const log = Cypress.log({
     displayName: 'AUTH0 LOGIN',
