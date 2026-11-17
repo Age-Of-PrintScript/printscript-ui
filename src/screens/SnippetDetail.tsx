@@ -11,9 +11,10 @@ import {
 } from "../utils/queries.tsx";
 import {useFormatSnippet, useGetSnippetById, useShareSnippet} from "../utils/queries.tsx";
 import {Bòx} from "../components/snippet-table/SnippetBox.tsx";
-import {BugReport, Delete, Download, Save, Share} from "@mui/icons-material";
+import {BugReport, Delete, Download, History, Save, Share} from "@mui/icons-material";
 import {ShareSnippetModal} from "../components/snippet-detail/ShareSnippetModal.tsx";
 import {TestSnippetModal} from "../components/snippet-test/TestSnippetModal.tsx";
+import {SnippetHistoryModal} from "../components/snippet-detail/SnippetHistoryModal.tsx";
 import {ShareRole, Snippet} from "../utils/snippet.ts";
 import {SnippetExecution} from "./SnippetExecution.tsx";
 import ReadMoreIcon from '@mui/icons-material/ReadMore';
@@ -60,6 +61,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
   const [shareModalOppened, setShareModalOppened] = useState(false)
   const [deleteConfirmationModalOpen, setDeleteConfirmationModalOpen] = useState(false)
   const [testModalOpened, setTestModalOpened] = useState(false);
+  const [historyModalOpened, setHistoryModalOpened] = useState(false);
   const {createSnackbar} = useSnackbarContext();
 
   const {data: snippet, isLoading} = useGetSnippetById(id);
@@ -148,6 +150,11 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                   <Save />
                 </IconButton>
               </Tooltip>
+              <Tooltip title={"Version history"}>
+                <IconButton onClick={() => setHistoryModalOpened(true)}>
+                  <History />
+                </IconButton>
+              </Tooltip>
               <Tooltip title={"Delete"}>
                 <IconButton onClick={() => setDeleteConfirmationModalOpen(true)} >
                   <Delete color={"error"} />
@@ -181,6 +188,7 @@ export const SnippetDetail = (props: SnippetDetailProps) => {
                            onClose={() => setShareModalOppened(false)}
                            onShare={handleShareSnippet}/>
         <TestSnippetModal open={testModalOpened} onClose={() => setTestModalOpened(false)} snippetId={id}/>
+        <SnippetHistoryModal open={historyModalOpened} onClose={() => setHistoryModalOpened(false)} snippetId={id} snippetName={snippet?.name} extension={snippet?.extension} />
         <DeleteConfirmationModal open={deleteConfirmationModalOpen} onClose={() => setDeleteConfirmationModalOpen(false)} id={snippet?.id ?? ""} setCloseDetails={handleCloseModal} />
       </Box>
   );

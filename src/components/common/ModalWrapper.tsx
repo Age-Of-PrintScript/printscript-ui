@@ -1,7 +1,7 @@
-import {Box, Modal} from "@mui/material";
+import {Box, Modal, SxProps, Theme} from "@mui/material";
 import {ReactNode} from "react";
 
-export const ModalWrapper = ({open, onClose,children}: { open: boolean, onClose: () => void, children: ReactNode }) => {
+export const ModalWrapper = ({open, onClose, children, sx}: { open: boolean, onClose: () => void, children: ReactNode, sx?: SxProps<Theme> }) => {
   return (
       <Modal
           open={open}
@@ -17,7 +17,8 @@ export const ModalWrapper = ({open, onClose,children}: { open: boolean, onClose:
           width: '50%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px'
+          gap: '16px',
+          ...sx,
         }}>
           {children}
         </Box>

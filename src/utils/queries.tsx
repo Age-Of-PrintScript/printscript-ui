@@ -1,5 +1,5 @@
 import {useMutation, UseMutationResult, useQuery} from 'react-query';
-import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from './snippet.ts';
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, SnippetVersion, UpdateSnippet} from './snippet.ts';
 import {PaginatedUsers} from "./users.ts";
 import {RealSnippetOperations} from "./implementation/realSnippetOperations.ts";
 import {TestCase} from "../types/TestCase.ts";
@@ -27,12 +27,28 @@ export const useGetSnippets = (page: number = 0, pageSize: number = 10, filters?
   );
 };
 
-export const useGetSnippetById = (id: string) => {
+export const useGetSnippetById = (id: string, version?: number) => {
   const snippetOperations = useSnippetsOperations()
 
-  return useQuery<Snippet | undefined, Error>(['snippet', id], () => snippetOperations.getSnippetById(id), {
-    enabled: !!id, // This query will not execute until the id is provided
-  });
+  return useQuery<Snippet | undefined, Error>(
+    ['snippet', id, version],
+    () => snippetOperations.getSnippetById(id, version),
+    {
+      enabled: !!id,
+    }
+  );
+};
+
+export const useGetSnippetVersions = (id: string, enabled: boolean = true) => {
+  const snippetOperations = useSnippetsOperations()
+
+  return useQuery<SnippetVersion[], Error>(
+    ['snippetVersions', id],
+    () => snippetOperations.getSnippetVersions(id),
+    {
+      enabled: !!id && enabled,
+    }
+  );
 };
 
 export type MutationCallbacks = {

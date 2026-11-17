@@ -1,4 +1,4 @@
-import {ComplianceEnum, CreateSnippet, Snippet, UpdateSnippet} from '../snippet'
+import {ComplianceEnum, CreateSnippet, Snippet, SnippetVersion, UpdateSnippet} from '../snippet'
 import {v4 as uuid} from 'uuid'
 import {PaginatedUsers} from "../users.ts";
 import {TestCase} from "../../types/TestCase.ts";
@@ -162,13 +162,16 @@ const fileTypes: FileType[] = [
 
 export class FakeSnippetStore {
   private readonly snippetMap: Map<string, Snippet> = new Map()
+  private readonly snippetVersionsMap: Map<string, Snippet[]> = new Map()
   private readonly testCaseMap: Map<string, TestCase> = new Map()
   private formattingRules: Rule[] = [];
   private lintingRules: Rule[] = [];
 
   constructor() {
     INITIAL_SNIPPETS.forEach(snippet => {
-      this.snippetMap.set(snippet.id, snippet)
+      const s = {...snippet, snippetVersion: 1}
+      this.snippetMap.set(snippet.id, s)
+      this.snippetVersionsMap.set(snippet.id, [s])
     })
 
     fakeTestCases.forEach(testCase => {
@@ -184,19 +187,37 @@ export class FakeSnippetStore {
 
   createSnippet(createSnippet: CreateSnippet): Snippet {
     const id = uuid();
-    const newSnippet = {
+    const newSnippet: Snippet = {
       id,
+      snippetVersion: 1,
       compliance: 'compliant' as ComplianceEnum,
       author: 'yo',
       ...createSnippet
     }
     this.snippetMap.set(id, newSnippet)
+    this.snippetVersionsMap.set(id, [newSnippet])
 
     return newSnippet
   }
 
-  getSnippetById(id: string): Snippet | undefined {
+  getSnippetById(id: string, version?: number): Snippet | undefined {
+    if (version !== undefined) {
+      const versions = this.snippetVersionsMap.get(id)
+      return versions?.find(v => (v.snippetVersion ?? 1) === version)
+    }
     return this.snippetMap.get(id)
+  }
+
+  getSnippetVersions(id: string): SnippetVersion[] {
+    const versions = this.snippetVersionsMap.get(id) ?? (this.snippetMap.has(id) ? [this.snippetMap.get(id)!] : [])
+    const total = versions.length
+    return versions.map((s, idx) => ({
+      id: s.id,
+      version: s.snippetVersion ?? (idx + 1),
+      isLatest: (idx + 1) === total,
+      language: s.language,
+      languageVersion: s.version,
+    })).reverse()
   }
 
   updateSnippet(id: string, updateSnippet: UpdateSnippet): Snippet {
@@ -205,11 +226,17 @@ export class FakeSnippetStore {
     if (existingSnippet === undefined)
       throw Error(`Snippet with id ${id} does not exist`)
 
+    const versions = this.snippetVersionsMap.get(id) ?? [existingSnippet]
+    const nextVer = (existingSnippet.snippetVersion ?? versions.length) + 1
+
     const newSnippet = {
       ...existingSnippet,
-      ...updateSnippet
+      ...updateSnippet,
+      snippetVersion: nextVer
     }
     this.snippetMap.set(id, newSnippet)
+    versions.push(newSnippet)
+    this.snippetVersionsMap.set(id, versions)
 
     for (const [key, tc] of this.testCaseMap.entries()) {
       this.testCaseMap.set(key, {...tc, status: "NOT_RUN"})

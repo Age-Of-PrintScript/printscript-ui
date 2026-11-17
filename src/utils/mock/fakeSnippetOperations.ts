@@ -1,6 +1,6 @@
 import {SnippetOperations} from '../snippetOperations'
 import {FakeSnippetStore} from './fakeSnippetStore'
-import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, UpdateSnippet} from '../snippet'
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetVersion, UpdateSnippet} from '../snippet'
 import autoBind from 'auto-bind'
 import {PaginatedUsers} from "../users.ts";
 import {TestCase} from "../../types/TestCase.ts";
@@ -23,9 +23,15 @@ export class FakeSnippetOperations implements SnippetOperations {
     })
   }
 
-  getSnippetById(id: string): Promise<Snippet | undefined> {
+  getSnippetById(id: string, version?: number): Promise<Snippet | undefined> {
     return new Promise(resolve => {
-      setTimeout(() => resolve(this.fakeStore.getSnippetById(id)), DELAY)
+      setTimeout(() => resolve(this.fakeStore.getSnippetById(id, version)), DELAY)
+    })
+  }
+
+  getSnippetVersions(id: string): Promise<SnippetVersion[]> {
+    return new Promise(resolve => {
+      setTimeout(() => resolve(this.fakeStore.getSnippetVersions(id)), DELAY)
     })
   }
 
