@@ -1,10 +1,10 @@
 import {SnippetOperations} from '../snippetOperations'
 import {FakeSnippetStore} from './fakeSnippetStore'
-import {CreateSnippet, PaginatedSnippets, Snippet, UpdateSnippet} from '../snippet'
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, UpdateSnippet} from '../snippet'
 import autoBind from 'auto-bind'
 import {PaginatedUsers} from "../users.ts";
 import {TestCase} from "../../types/TestCase.ts";
-import {TestCaseResult} from "../queries.tsx";
+import type {TestCaseResult} from "../queries.tsx";
 import {FileType} from "../../types/FileType.ts";
 import {Rule} from "../../types/Rule.ts";
 
@@ -54,10 +54,10 @@ export class FakeSnippetOperations implements SnippetOperations {
     })
   }
 
-  shareSnippet(snippetId: string): Promise<Snippet> {
+  shareSnippet(snippetId: string, userId: string, role: ShareRole): Promise<void> {
+    void snippetId; void userId; void role;
     return new Promise(resolve => {
-      // @ts-expect-error, it will always find it in the fake store
-      setTimeout(() => resolve(this.fakeStore.getSnippetById(snippetId)), DELAY)
+      setTimeout(() => resolve(), DELAY)
     })
   }
 
@@ -79,15 +79,17 @@ export class FakeSnippetOperations implements SnippetOperations {
     })
   }
 
-  getTestCases(): Promise<TestCase[]> {
+  getTestCases(snippetId: string): Promise<TestCase[]> {
+    void snippetId;
     return new Promise(resolve => {
       setTimeout(() => resolve(this.fakeStore.getTestCases()), DELAY)
     })
   }
 
-  postTestCase(testCase: TestCase): Promise<TestCase> {
+  postTestCase(snippetId: string, testCase: Partial<TestCase>): Promise<TestCase> {
+    void snippetId;
     return new Promise(resolve => {
-      setTimeout(() => resolve(this.fakeStore.postTestCase(testCase)), DELAY)
+      setTimeout(() => resolve(this.fakeStore.postTestCase(testCase as TestCase)), DELAY)
     })
   }
 
@@ -97,7 +99,8 @@ export class FakeSnippetOperations implements SnippetOperations {
     })
   }
 
-  testSnippet(): Promise<TestCaseResult> {
+  testSnippet(snippetId: string): Promise<TestCaseResult> {
+    void snippetId;
     return new Promise(resolve => {
       setTimeout(() => resolve(this.fakeStore.testSnippet()), DELAY)
     })
