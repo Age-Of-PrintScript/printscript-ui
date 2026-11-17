@@ -8,9 +8,12 @@ import type {TestCaseResult} from "../queries.tsx";
 import {createApiClient} from "./apiClient.ts";
 import {PERMISSIONS_URL} from "../constants.ts";
 import {AxiosInstance} from "axios";
-import {FakeSnippetOperations} from "../mock/fakeSnippetOperations.ts";
 import {
     FormatRulesResponse,
+    LintRulesResponse,
+    UpdateLintRulesRequest,
+    FormatJobAcceptedResponse,
+    JobStatusResponse,
     UpdateFormatRulesRequest,
     ActiveFormatRulesResponse,
     SnippetResponse,
@@ -26,6 +29,7 @@ import {
     SnippetSummaryResponse,
     PaginatedUsersResponse,
     ShareSnippetRequest,
+    LanguageResponse,
 } from "./apiResponses.ts";
 
 const toComplianceEnum = (status: string): ComplianceEnum => {
@@ -42,8 +46,6 @@ export class RealSnippetOperations implements SnippetOperations {
     // snippet-service no expone todo: lo de permisos/usuarios vive en permissions-service,
     // detrás de otra base URL (en la VM, nginx lo enruta via /api/permissions/*).
     private permissionsApi: AxiosInstance;
-    // Operaciones sin endpoint real en el backend hoy: se delegan al mock para no romper la UI.
-    private readonly fallback = new FakeSnippetOperations();
 
     constructor(getAccessTokenSilently: () => Promise<string>) {
         this.api = createApiClient(getAccessTokenSilently)
@@ -81,31 +83,55 @@ export class RealSnippetOperations implements SnippetOperations {
         return id;
     }
 
-    formatSnippet(snippet: string): Promise<string> {
-        // POST /format/{id} es asíncrono (202 {jobId}) sin endpoint para consultar el resultado;
-        // no se puede exponer como Promise<string> síncrona todavía
-        return this.fallback.formatSnippet(snippet);
+    async formatSnippet(snippetId: string): Promise<string> {
+        // Formatea el contenido ya guardado en el backend, no lo que haya sin guardar en el editor;
+        // si hay ediciones pendientes, se ignoran (se formatea la última versión persistida).
+        const jobRes = await this.api.post<FormatJobAcceptedResponse>(`/format/${snippetId}`);
+        const jobId = jobRes.data.jobId;
+
+        for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise(r => setTimeout(r, 1000));
+            const res = await this.api.get<JobStatusResponse>(`/jobs/${jobId}`);
+            if (res.data.status === "DONE") {
+                const snippet = await this.getSnippetById(snippetId);
+                if (!snippet) throw new Error(`Snippet ${snippetId} not found after formatting`);
+                return snippet.content;
+            }
+            if (res.data.status === "FAILED") throw new Error("El formateo falló");
+        }
+        throw new Error("Timeout esperando el resultado del formateo");
     }
 
-    getFileTypes(): Promise<FileType[]> {
-        // falta catálogo de lenguajes/extensiones soportadas; hoy solo "printscript" está hardcodeado server-side
-        return this.fallback.getFileTypes();
+    async getFileTypes(): Promise<FileType[]> {
+        const res = await this.api.get<LanguageResponse[]>('/languages');
+        return res.data.flatMap((lang) =>
+            lang.fileTypes.map((extension) => ({
+                language: lang.language,
+                extension,
+            })),
+        );
     }
 
     async getFormatRules(): Promise<Rule[]> {
         const res = await this.api.get<FormatRulesResponse>('format/rules')
-        const rules = res.data.rules.map(r => ({
+        const activeByRuleId = new Map(res.data.activeRules.map(a => [a.ruleId, a.value]));
+        return res.data.rules.map(r => ({
             id: String(r.id),
             name: r.name,
-            isActive: false, // falta implementar el endpoint GET activeFormatRules en la api
-            value: r.defaultValue,
+            isActive: activeByRuleId.has(r.id),
+            value: activeByRuleId.has(r.id) ? activeByRuleId.get(r.id) : r.defaultValue,
         }));
-        return rules
     }
 
-    getLintingRules(): Promise<Rule[]> {
-        // falta GET /lint/rules (catálogo) en snippet-service; solo existe PUT /lint/rules (escritura)
-        return this.fallback.getLintingRules();
+    async getLintingRules(): Promise<Rule[]> {
+        const res = await this.api.get<LintRulesResponse>('lint/rules')
+        const activeByRuleId = new Map(res.data.activeRules.map(a => [a.ruleId, a.value]));
+        return res.data.rules.map(r => ({
+            id: String(r.id),
+            name: r.name,
+            isActive: activeByRuleId.has(r.id),
+            value: activeByRuleId.has(r.id) ? activeByRuleId.get(r.id) : r.defaultValue,
+        }));
     }
 
     async getSnippetById(id: string): Promise<Snippet | undefined> {
@@ -115,9 +141,9 @@ export class RealSnippetOperations implements SnippetOperations {
 
     async getTestCases(snippetId: string): Promise<TestCase[]> {
         const res = await this.api.get<TestListItemResponse[]>('/tests', {params: {snippetId}});
-        return res.data.map((t, i) => ({
+        return res.data.map((t) => ({
             id: t.id,
-            name: `Test ${i + 1}`, // TODO(modificar endpoint para traer nombre del test)
+            name: t.name,
             input: t.inputs,
             output: t.outputs,
         }));
@@ -168,24 +194,32 @@ export class RealSnippetOperations implements SnippetOperations {
 
     }
 
-    modifyLintingRule(newRules: Rule[]): Promise<Rule[]> {
-        // delegado junto con getLintingRules: sin el catálogo real, los ruleId mostrados en la UI
-        // serían del fake y no matchean los ids reales del backend (el PUT real respondería 400 unknownRuleIds)
-        return this.fallback.modifyLintingRule(newRules);
+    async modifyLintingRule(newRules: Rule[]): Promise<Rule[]> {
+        const selections = newRules
+            .filter(r => r.isActive)
+            .map(r => ({
+                ruleId: Number(r.id),
+                value: typeof r.value === 'string' ? r.value : null,
+            }));
+        const body: UpdateLintRulesRequest = {rules: selections};
+        await this.api.put('/lint/rules', body);
+        return newRules;
     }
 
     async postTestCase(snippetId: string, testCase: Partial<TestCase>): Promise<TestCase> {
         const body: CreateSnippetTestRequest = {
+            name: testCase.name ?? "Test",
             inputs: testCase.input ?? [],
             outputs: testCase.output ?? [],
+            id: testCase.id,
         };
         const res = await this.api.post<SnippetTestResponse>(`/snippet/${snippetId}/test`, body);
-        return {id: res.data.id, name: testCase.name ?? "", input: body.inputs, output: body.outputs};
+        return {id: res.data.id, name: res.data.name, input: body.inputs, output: body.outputs};
     }
 
-    removeTestCase(id: string): Promise<string> {
-        // no existe DELETE de test case en el backend
-        return this.fallback.removeTestCase(id);
+    async removeTestCase(id: string): Promise<string> {
+        await this.api.delete(`/snippet/test/${id}`);
+        return id;
     }
 
     async shareSnippet(snippetId: string, userId: string, role: ShareRole): Promise<void> {
