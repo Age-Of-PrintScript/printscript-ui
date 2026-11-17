@@ -1,49 +1,39 @@
-import {BACKEND_URL} from "../../src/utils/constants";
+import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL} from "../../src/utils/constants";
 
 describe('Add snippet tests', () => {
   beforeEach(() => {
-    // cy.loginToAuth0(
-    //     AUTH0_USERNAME,
-    //     AUTH0_PASSWORD
-    // )
+    cy.loginToAuth0(
+        AUTH0_USERNAME,
+        AUTH0_PASSWORD
+    )
   })
   it('Can add snippets manually', () => {
     cy.visit("/")
-    cy.intercept('POST', BACKEND_URL+"/snippets", (req) => {
-      req.reply((res) => {
-        expect(res.body).to.include.keys("id","name","content","language")
-        expect(res.statusCode).to.eq(200);
-      });
-    }).as('postRequest');
+    cy.intercept('POST', `${BACKEND_URL}/snippet`).as('postRequest');
 
-    /* ==== Generated with Cypress Studio ==== */
-    cy.get('.css-9jay18 > .MuiButton-root').click();
-    cy.get('.MuiList-root > [tabindex="0"]').click();
+    cy.contains('button', 'Add Snippet').click();
+    cy.contains('li', 'Create snippet').click();
     cy.get('#name').type('Some snippet name');
-    cy.get('#demo-simple-select').click()
-    cy.get('[data-testid="menu-option-printscript"]').click()
+    cy.get('#demo-simple-select').click();
+    cy.get('[data-testid="menu-option-printscript"]').click();
 
-    cy.get('[data-testid="add-snippet-code-editor"]').click();
-    cy.get('[data-testid="add-snippet-code-editor"]').type(`const snippet: String = "some snippet" \n print(snippet)`);
-    cy.get('[data-testid="SaveIcon"]').click();
+    cy.get('[data-testid="add-snippet-code-editor"] textarea').type('let snippet: string = "some snippet";\nprintln(snippet);', {force: true});
+    cy.contains('button', 'Save').click();
 
-    cy.wait('@postRequest').its('response.statusCode').should('eq', 200);
+    cy.wait('@postRequest').its('response.statusCode').should('eq', 201);
   })
 
   it('Can add snippets via file', () => {
+    cy.intercept('GET', `${BACKEND_URL}/languages`).as('getLanguages');
+    cy.intercept('POST', `${BACKEND_URL}/snippet`).as('postRequest');
+
     cy.visit("/")
-    cy.intercept('POST', BACKEND_URL+"/snippets", (req) => {
-      req.reply((res) => {
-        expect(res.body).to.include.keys("id","name","content","language")
-        expect(res.statusCode).to.eq(200);
-      });
-    }).as('postRequest');
+    cy.wait(['@getLanguages', '@getLanguages'], {timeout: 15000});
 
-    /* ==== Generated with Cypress Studio ==== */
-    cy.get('[data-testid="upload-file-input"').selectFile("cypress/fixtures/example_ps.ps", {force: true})
+    cy.get('[data-testid="upload-file-input"]').selectFile("cypress/fixtures/example_ps.ps", {force: true});
 
-    cy.get('[data-testid="SaveIcon"]').click();
+    cy.contains('button', 'Save', {timeout: 10000}).click();
 
-    cy.wait('@postRequest').its('response.statusCode').should('eq', 200);
+    cy.wait('@postRequest').its('response.statusCode').should('eq', 201);
   })
 })
