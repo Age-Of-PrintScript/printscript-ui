@@ -5,5 +5,6 @@ declare namespace Cypress {
      * @example cy.loginToAuth0('username', 'password')
      */
     loginToAuth0(username: string, password: string): Chainable<void>
+    getAuth0Token(): Chainable<string>
   }
 }

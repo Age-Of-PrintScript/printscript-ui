@@ -147,6 +147,10 @@ const fileTypes: FileType[] = [
     extension: "prs",
   },
   {
+    language: "printscript",
+    extension: "ps",
+  },
+  {
     language: "python",
     extension: "py",
   },

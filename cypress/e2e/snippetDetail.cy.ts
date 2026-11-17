@@ -4,21 +4,19 @@ import {FakeSnippetStore} from "../../src/utils/mock/fakeSnippetStore";
 describe('Add snippet tests', () => {
   const fakeStore = new FakeSnippetStore()
   beforeEach(() => {
-    // cy.loginToAuth0(
-    //     AUTH0_USERNAME,
-    //     AUTH0_PASSWORD
-    // )
-    cy.intercept('GET', BACKEND_URL+"/snippets/*", {
-      statusCode: 201,
+    cy.loginToAuth0(
+        AUTH0_USERNAME,
+        AUTH0_PASSWORD
+    )
+    cy.intercept('GET', BACKEND_URL+"/snippet/*", {
+      statusCode: 200,
       body: fakeStore.getSnippetById("1"),
     }).as("getSnippetById")
-    cy.intercept('GET', BACKEND_URL+"/snippets").as("getSnippets")
+    cy.intercept('GET', BACKEND_URL+"/snippet*").as("getSnippets")
 
     cy.visit("/")
 
-    // cy.wait("@getSnippets")
-    cy.wait(2000) // TODO comment this line and uncomment 19 to wait for the real data
-    cy.get('.MuiTableBody-root > :nth-child(1) > :nth-child(1)').click();
+    cy.get('.MuiTableBody-root > :nth-child(1)', { timeout: 10000 }).click();
   })
 
   it('Can share a snippet ', () => {
