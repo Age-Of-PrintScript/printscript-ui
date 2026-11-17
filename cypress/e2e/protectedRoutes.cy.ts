@@ -1,37 +1,32 @@
-import {AUTH0_USERNAME,AUTH0_PASSWORD} from "../../src/utils/constants";
+import {AUTH0_PASSWORD, AUTH0_USERNAME} from "../../src/utils/constants";
 
 describe('Protected routes test', () => {
   it('should redirect to login when accessing a protected route unauthenticated', () => {
-    // Visit the protected route
     cy.visit('/');
 
-    cy.wait(1000)
-
-    // Check if the URL is redirected to the login page
-    cy.url().should('include', '/login');
+    cy.origin(`https://${Cypress.env('VITE_AUTH0_DOMAIN')}`, () => {
+      cy.url().should('include', '/u/login');
+    });
   });
 
   it('should display login content', () => {
-    // Visit the login page
-    cy.visit('/login');
+    cy.visit('/');
 
-    // Look for text that is likely to appear on a login page
-    cy.contains('Log in').should('exist');
-    cy.contains('Password').should('exist'); // Adjust the text based on actual content
+    cy.origin(`https://${Cypress.env('VITE_AUTH0_DOMAIN')}`, () => {
+      cy.contains('Log in').should('exist');
+      cy.contains('Password').should('exist');
+    });
   });
 
   it('should not redirect to login when the user is already authenticated', () => {
     cy.loginToAuth0(
-        AUTH0_USERNAME,
-        AUTH0_PASSWORD
-    )
+      AUTH0_USERNAME,
+      AUTH0_PASSWORD
+    );
 
     cy.visit('/');
 
-    cy.wait(1000)
-
-    // Check if the URL is redirected to the login page
-    cy.url().should('not.include', '/login');
+    cy.get('.MuiTypography-h6', {timeout: 10000}).should('have.text', 'Printscript');
+    cy.url().should('not.include', '/u/login');
   });
-
-})
+});

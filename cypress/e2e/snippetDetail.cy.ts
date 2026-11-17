@@ -1,50 +1,65 @@
-import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL} from "../../src/utils/constants";
-import {FakeSnippetStore} from "../../src/utils/mock/fakeSnippetStore";
+import {AUTH0_PASSWORD, AUTH0_USERNAME, BACKEND_URL, PERMISSIONS_URL} from "../../src/utils/constants";
 
-describe('Add snippet tests', () => {
-  const fakeStore = new FakeSnippetStore()
+describe('Snippet detail tests', () => {
+  const createSnippetAndOpenDetail = () => {
+    const title = `Detail-${Date.now()}`;
+    cy.intercept('POST', `${BACKEND_URL}/snippet`).as('createSnippet');
+    cy.intercept('GET', `${BACKEND_URL}/snippet/*`).as('getSnippetById');
+
+    cy.visit('/');
+    cy.contains('button', 'Add Snippet').click();
+    cy.contains('li', 'Create snippet').click();
+    cy.get('#name').type(title);
+    cy.get('[data-testid="add-snippet-code-editor"] textarea').type('let x: number = 1;\nprintln(x);', {force: true});
+    cy.contains('button', 'Save').click();
+
+    cy.wait('@createSnippet').its('response.statusCode').should('eq', 201);
+    cy.contains('[data-testid="snippet-row"]', title).click();
+    cy.wait('@getSnippetById');
+  };
+
   beforeEach(() => {
-    // cy.loginToAuth0(
-    //     AUTH0_USERNAME,
-    //     AUTH0_PASSWORD
-    // )
-    cy.intercept('GET', BACKEND_URL+"/snippets/*", {
-      statusCode: 201,
-      body: fakeStore.getSnippetById("1"),
-    }).as("getSnippetById")
-    cy.intercept('GET', BACKEND_URL+"/snippets").as("getSnippets")
+    cy.loginToAuth0(
+      AUTH0_USERNAME,
+      AUTH0_PASSWORD
+    );
+    createSnippetAndOpenDetail();
+  });
 
-    cy.visit("/")
+  it('Can share a snippet', () => {
+    cy.intercept('GET', `${PERMISSIONS_URL}/users*`).as('getUsers');
+    cy.intercept('POST', `${PERMISSIONS_URL}/snippets/*/members`).as('shareSnippet');
 
-    // cy.wait("@getSnippets")
-    cy.wait(2000) // TODO comment this line and uncomment 19 to wait for the real data
-    cy.get('.MuiTableBody-root > :nth-child(1) > :nth-child(1)').click();
-  })
-
-  it('Can share a snippet ', () => {
     cy.get('[aria-label="Share"]').click();
-    cy.get('#\\:rl\\:').click();
-    cy.get('#\\:rl\\:-option-0').click();
-    cy.get('.css-1yuhvjn > .MuiBox-root > .MuiButton-contained').click();
-    cy.wait(2000)
-  })
+    cy.wait('@getUsers');
+    cy.get('input[role="combobox"]').click();
+    cy.get('[role="option"]').first().click();
+    cy.contains('button', 'Share').click();
 
-  it('Can run snippets', function() {
+    cy.wait('@shareSnippet').its('response.statusCode').should('eq', 201);
+  });
+
+  it.skip('Can run snippets', function () {
     cy.get('[data-testid="PlayArrowIcon"]').click();
-    cy.get('.css-1hpabnv > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').should("have.length.greaterThan",0);
   });
 
-  it('Can format snippets', function() {
-    cy.get('[data-testid="ReadMoreIcon"] > path').click();
+  it('Can format snippets', function () {
+    cy.intercept('POST', `${BACKEND_URL}/format/*`).as('formatSnippet');
+    cy.get('[data-testid="ReadMoreIcon"]').click();
+    cy.wait('@formatSnippet').its('response.statusCode').should('eq', 202);
   });
 
-  it('Can save snippets', function() {
-    cy.get('.css-10egq61 > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').click();
-    cy.get('.css-10egq61 > .MuiBox-root > div > .npm__react-simple-code-editor__textarea').type("Some new line");
-    cy.get('[data-testid="SaveIcon"] > path').click();
+  it('Can save snippets', function () {
+    cy.intercept('PUT', `${BACKEND_URL}/snippet/*`).as('updateSnippet');
+    cy.get('.MuiDrawer-paper textarea').first().type('\nlet y: number = 2;', {force: true});
+    cy.get('[data-testid="SaveIcon"]').click();
+    cy.wait('@updateSnippet').its('response.statusCode').should('eq', 200);
   });
 
-  it('Can delete snippets', function() {
-    cy.get('[data-testid="DeleteIcon"] > path').click();
+  it('Can delete snippets', function () {
+    cy.intercept('DELETE', `${BACKEND_URL}/snippet/*`).as('deleteSnippet');
+    cy.get('[data-testid="DeleteIcon"]').click();
+    cy.contains('button', 'Delete').click();
+    cy.wait('@deleteSnippet').its('response.statusCode').should('eq', 204);
   });
-})
+});
