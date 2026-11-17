@@ -1,12 +1,12 @@
-import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, UpdateSnippet} from './snippet'
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from './snippet'
 import {PaginatedUsers} from "./users.ts";
 import {TestCase} from "../types/TestCase.ts";
 import {TestCaseResult} from "./queries.tsx";
-import {FileType} from "../types/FileType.ts";
+import {FileType, LanguageOption} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
 
 export interface SnippetOperations {
-  listSnippetDescriptors(page: number,pageSize: number,sippetName?: string): Promise<PaginatedSnippets>
+  listSnippetDescriptors(page: number, pageSize: number, filters?: SnippetFilters | string): Promise<PaginatedSnippets>
 
   createSnippet(createSnippet: CreateSnippet): Promise<Snippet>
 
@@ -37,6 +37,8 @@ export interface SnippetOperations {
   testAllSnippets(snippetId: string): Promise<Record<string, TestCaseResult>>
 
   getFileTypes(): Promise<FileType[]>
+
+  getLanguages(): Promise<LanguageOption[]>
 
   modifyFormatRule(newRules: Rule[]): Promise<Rule[]>
 

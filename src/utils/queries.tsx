@@ -1,9 +1,9 @@
 import {useMutation, UseMutationResult, useQuery} from 'react-query';
-import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, UpdateSnippet} from './snippet.ts';
+import {CreateSnippet, PaginatedSnippets, ShareRole, Snippet, SnippetFilters, UpdateSnippet} from './snippet.ts';
 import {PaginatedUsers} from "./users.ts";
 import {RealSnippetOperations} from "./implementation/realSnippetOperations.ts";
 import {TestCase} from "../types/TestCase.ts";
-import {FileType} from "../types/FileType.ts";
+import {FileType, LanguageOption} from "../types/FileType.ts";
 import {Rule} from "../types/Rule.ts";
 import {useAuth0} from "@auth0/auth0-react";
 import {useMemo} from "react";
@@ -18,10 +18,13 @@ export const useSnippetsOperations = () => {
   );
 }
 
-export const useGetSnippets = (page: number = 0, pageSize: number = 10, snippetName?: string) => {
+export const useGetSnippets = (page: number = 0, pageSize: number = 10, filters?: SnippetFilters | string) => {
   const snippetOperations = useSnippetsOperations()
 
-  return useQuery<PaginatedSnippets, Error>(['listSnippets', page,pageSize,snippetName], () => snippetOperations.listSnippetDescriptors(page, pageSize,snippetName));
+  return useQuery<PaginatedSnippets, Error>(
+    ['listSnippets', page, pageSize, filters],
+    () => snippetOperations.listSnippetDescriptors(page, pageSize, filters),
+  );
 };
 
 export const useGetSnippetById = (id: string) => {
@@ -196,6 +199,14 @@ export const useGetFileTypes = () => {
   const snippetOperations = useSnippetsOperations()
 
   return useQuery<FileType[], Error>('fileTypes', () => snippetOperations.getFileTypes(), {
+    staleTime: 5 * 60_000,
+  });
+}
+
+export const useGetLanguages = () => {
+  const snippetOperations = useSnippetsOperations()
+
+  return useQuery<LanguageOption[], Error>('languages', () => snippetOperations.getLanguages(), {
     staleTime: 5 * 60_000,
   });
 }
